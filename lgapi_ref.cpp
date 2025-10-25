@@ -1,14 +1,19 @@
 #include "lgapi.h"
+
 #include <memory>
+#include <stdio.h>
+#include <stdlib.h>
 
 #include <GL/gl.h>
 #include <GL/glu.h>
-#include <GL/glut.h>
+#include "GL/glut.h"
 
 void ExitProgram();
 
 struct BatchRenderGL : public IRender
 {
+  int glut_window_id;
+  BatchRenderGL(int win_id) : glut_window_id{win_id} {}
   ~BatchRenderGL() override { ExitProgram(); }
   
   unsigned int AddImage(Image2D a_img) override;
@@ -24,76 +29,8 @@ struct BatchRenderGL : public IRender
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#include<stdio.h>
-#include<stdlib.h>
-#include<X11/X.h>
-#include<X11/Xlib.h>
-#include<GL/gl.h>
-#include<GL/glx.h>
-#include<GL/glu.h>
-
-Display              *dpy;
-Window               root, win;
-GLint                att[]   = { GLX_RGBA, GLX_DEPTH_SIZE, 24, GLX_DOUBLEBUFFER, None };
-XVisualInfo          *vi;
-GLXContext           glc;
-Colormap             cmap;
-XSetWindowAttributes swa;
-XWindowAttributes	   wa;
-XEvent			         xev;
-
-void CreateWindow(int WIN_WIDTH_INITIAL, int WIN_HEIGHT_INITIAL)
-{
-  if((dpy = XOpenDisplay(NULL)) == NULL)
-  {
-    printf("\n\tcannot connect to x server\n\n");
-    exit(0);
-  }
-
-  root = DefaultRootWindow(dpy);
-
-  if((vi = glXChooseVisual(dpy, 0, att)) == NULL)
-  {
-    printf("\n\tno matching visual\n\n");
-    exit(0);
-  }
-
-  if((cmap = XCreateColormap(dpy, root, vi->visual, AllocNone)) == 0)
-  {
-    printf("\n\tcannot create colormap\n\n");
-    exit(0);
-  }
-
-  swa.event_mask = KeyPressMask;
-  swa.colormap 	= cmap;
-  win = XCreateWindow(dpy, root, 0, 0, WIN_WIDTH_INITIAL, WIN_HEIGHT_INITIAL, 0, vi->depth, InputOutput, vi->visual, CWColormap | CWEventMask, &swa);
-  XStoreName(dpy, win, "OpenGL Animation");
-  XMapWindow(dpy, win);
-}
-
-void SetupGL()
-{
-  char		font_string[128];
-  XFontStruct	*font_struct;
-
-  glc = glXCreateContext(dpy, vi, NULL, GL_TRUE);
-
-  if(glc == NULL)
-  {
-    printf("\n\tcannot create gl context\n\n");
-    exit(0);
-  }
-
-  glXMakeCurrent(dpy, win, glc);
-  glClearColor(0.00, 0.00, 0.40, 1.00);
-}
-
 void ExitProgram()
 {
-  glXMakeCurrent(dpy, None, NULL);
-  glXDestroyContext(dpy, glc);
-  XDestroyWindow(dpy, win);
-  XCloseDisplay(dpy);
   exit(0);
 }
 
@@ -101,15 +38,23 @@ extern uint32_t WIN_WIDTH ;
 extern uint32_t WIN_HEIGHT;
 
 std::shared_ptr<IRender> MakeReferenceImpl() 
-{ 
-  CreateWindow(WIN_WIDTH,WIN_HEIGHT);
-  SetupGL();
+{
+  int argc = 1;
+  char **argv = nullptr;
 
-  XGetWindowAttributes(dpy, win, &wa);
-  glViewport(0, 0, wa.width, wa.height);
+  glutInit(&argc, argv);
+  glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH);
+  glutInitWindowSize(WIN_WIDTH, WIN_HEIGHT);
+  int glut_window_id = glutCreateWindow("OpenGL Animation");
 
-  return std::make_shared<BatchRenderGL>(); 
-};
+  int  width = glutGet(GLUT_WINDOW_WIDTH);
+  int height = glutGet(GLUT_WINDOW_HEIGHT);
+
+  glClearColor(0.00, 0.00, 0.40, 1.00);
+  glViewport(0, 0, width, height);
+
+  return std::make_shared<BatchRenderGL>(glut_window_id); 
+}
 
 static void transposeMatrix(const float in_matrix[16], float out_matrix[16])
 {

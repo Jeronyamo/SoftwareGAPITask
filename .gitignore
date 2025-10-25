@@ -30,3 +30,18 @@
 *.exe
 *.out
 *.app
+
+# Latex
+doc/task3*
+!doc/task3.pdf
+!doc/task3.tex
+
+# Build files
+CmakeFiles/
+CMakeCache.txt
+Makefile
+*.cmake
+compile_commands.json
+config.h
+freeglut.pc
+freeglut.rc
